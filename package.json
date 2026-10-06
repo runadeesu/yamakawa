@@ -1,0 +1,31 @@
+{
+  "name": "yamakawa-teruki-game",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "やまかわてるきゲーム - 同じてるきを合体させろ！",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "e2e": "node e2e/play.mjs"
+  },
+  "dependencies": {
+    "matter-js": "^0.20.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/matter-js": "^0.20.2",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "playwright-core": "^1.56.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}
