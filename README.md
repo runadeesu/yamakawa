@@ -36,6 +36,13 @@ npm run preview    # ビルド結果を確認
 
 → 仕組み・DB 構築手順・セキュリティ・テスト結果・制限事項は [docs/ONLINE.md](docs/ONLINE.md)
 
+## 公開 (GitHub Pages)
+
+`.github/workflows/pages.yml` が、push のたびにテスト → ビルド → GitHub Pages へデプロイします (公開 URL: `https://<ユーザー名>.github.io/<リポジトリ名>/`)。
+
+初回だけ、リポジトリの **Settings → Pages → Build and deployment → Source を「GitHub Actions」** にしてください (トークンの権限上、自動化できません)。
+ビルドには公開用の `.env.production` (Supabase の URL と publishable key) が使われ、秘密鍵は含まれません。
+
 ## 音声について
 
 - 叫び声・ボイスは **ユーザー提供の MP3 だけ** (`public/audio/yamakawateruki-ndedayotuboooom.mp3`)。新しいセリフ・TTS・加工は一切ありません。
