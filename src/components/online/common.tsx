@@ -67,21 +67,30 @@ interface SheetProps {
   children: ReactNode;
 }
 
-/** 画面下から出るシート。Esc / 背景タップで閉じる */
+/**
+ * 画面下から出るシート。Esc / 背景タップで閉じる。
+ *
+ * 親は頻繁に再描画される (対戦画面は 0.1 秒ごと) ので、onClose は ref 経由で参照し、
+ * フォーカスの出し入れは「開いたとき」と「閉じたとき」の 1 回ずつだけにする。
+ * (再描画のたびにフォーカスを取り直すと、入力欄に文字が打てなくなる)
+ */
 export function Sheet({ title, onClose, children }: SheetProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     const previous = document.activeElement;
-    ref.current?.focus();
+    const panel = ref.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') closeRef.current();
     };
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      if (previous instanceof HTMLElement) previous.focus();
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div className="overlay sheet-overlay" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
       <div className="panel sheet" ref={ref} tabIndex={-1} onClick={(event) => event.stopPropagation()}>

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "e2e": "node e2e/play.mjs",
     "e2e:online": "node e2e/online.mjs",
-    "e2e:realtime": "node e2e/realtime.mjs"
+    "e2e:realtime": "node e2e/realtime.mjs",
+    "e2e:matchchat": "node e2e/matchchat.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -89,6 +89,7 @@ npm test                      # 物理・合体・スコア・ボイス + オン
 npm run build && npm run e2e  # START → 落下 → 合体 → MP3 → 最終形態 → GAME OVER → リスタート ほか (89 項目)
 npm run e2e:online            # オンライン E2E (実 Supabase にテスト用 zz_e2e_* アカウントを作る。82 項目)
 npm run e2e:realtime          # Realtime (WebSocket) 検証。プロキシ越しの環境では NODE_USE_ENV_PROXY=1 を付ける
+npm run e2e:matchchat         # 対戦中チャットの入力 (実際のキー入力でフォーカス喪失を検出)
 ```
 
 E2E は `?debug` を付けたときだけ公開される `window.__TERUKI__` で状態を読み取り、入力は実際のマウス・タッチ・キーボードで行います。
