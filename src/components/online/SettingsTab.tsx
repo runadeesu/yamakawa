@@ -11,7 +11,7 @@ interface Props {
   onExit: () => void;
 }
 
-const NET_TEXT = { ok: '接続中', connecting: '再接続しています…', offline: 'オフライン (通信できません)' } as const;
+const NET_TEXT = { ok: '接続中 (リアルタイム)', degraded: '接続中 (自動更新モード)', offline: 'オフライン (通信できません)' } as const;
 
 export function SettingsTab({ voiceOn, sfxOn, onToggleVoice, onToggleSfx, onExit }: Props) {
   const { me, net, logout } = useOnline();

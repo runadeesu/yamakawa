@@ -302,6 +302,25 @@ describe('matchmaking, invites and match results', () => {
       expect(r.end_reason).toBe('opponent_forfeit');
     });
 
+    it('exposes how long the opponent has been silent (server-side connection indicator)', async () => {
+      const [a, b] = await pair();
+      const { id } = await startMatch(a, b);
+      const lobby = await a.rpc('match_get', id);
+      expect(lobby.players.every((p: any) => p.idle_ms !== undefined)).toBe(true);
+      await rewind(id, 12);
+      await a.rpc('match_progress', id, 10);
+      await db.query(`update public.match_players set last_progress_at = now() - interval '9 seconds' where match_id = $1 and player_id = $2`, [id, b.id]);
+      const st = await a.rpc('match_progress', id, 10);
+      const mine = st.players.find((p: any) => p.id === a.id);
+      const theirs = st.players.find((p: any) => p.id === b.id);
+      expect(mine.idle_ms).toBeLessThan(2000);
+      expect(theirs.idle_ms).toBeGreaterThanOrEqual(9000);
+      expect(theirs.idle_ms).toBeLessThan(15000);
+      await a.rpc('match_leave', id);
+      const done = await b.rpc('match_get', id);
+      expect(done.players.every((p: any) => p.idle_ms === null)).toBe(true);   // 終了後は null
+    });
+
     it('progress is monotonic, rate limited and exposes the opponent score', async () => {
       const [a, b] = await pair();
       const { id } = await startMatch(a, b);

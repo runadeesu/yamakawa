@@ -129,6 +129,7 @@ export function FriendsTab({ onChat, onProfile }: Props) {
                   </button>
                 )}
                 {r.relation === 'friend' && <span className="muted">フレンド</span>}
+                {r.relation === 'self' && <span className="muted">あなた</span>}
                 {r.relation === 'blocked' && (
                   <button type="button" className="btn btn-small" disabled={action.busy} onClick={() => void action.run(async () => { await api.clearBlock(r.id); setResults(null); await after('ブロックを解除しました'); })}>
                     ブロック解除

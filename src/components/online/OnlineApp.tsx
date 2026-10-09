@@ -9,6 +9,7 @@ import { useMatchmaking } from '../../online/useMatchmaking';
 import { VersusScreen } from '../../online/versus/VersusScreen';
 import { AuthScreen } from './AuthScreen';
 import { ChatTab } from './ChatTab';
+import { ConnectionBanner } from './ConnectionBanner';
 import { Badge, Spinner, useAction } from './common';
 import { FriendsTab } from './FriendsTab';
 import { LobbyTab } from './LobbyTab';
@@ -168,6 +169,7 @@ export function OnlineApp(props: Props) {
   return (
     <main className="online" data-testid="online-home">
       <Header title={me?.player.name ?? 'オンライン'} onExit={onExit} />
+      <ConnectionBanner />
       <div className="online-body">
         {tab === 'lobby' && <LobbyTab matchmaking={matchmaking} onMatch={openMatch} onOpenFriends={() => setTab('friends')} />}
         {tab === 'friends' && <FriendsTab onChat={openChat} onProfile={setProfileOf} />}

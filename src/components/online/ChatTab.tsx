@@ -80,19 +80,39 @@ function Thread({ friend, onBack, onProfile }: { friend: Friend; onBack: () => v
   const action = useAction();
   const me = useOnline().me?.player.id;
 
-  const load = useCallback(async () => {
-    try {
-      setMessages(await api.chatHistory(friend.id));
-      await api.chatRead(friend.id);
-      void refresh();
-    } catch (e) {
-      fail(e);
-    }
-  }, [friend.id, fail, refresh]);
+  const { net } = useOnline();
+  const known = useRef<ChatMessage[]>([]);
+  known.current = messages;
+
+  /** サーバーの履歴を取り込む (最初の読み込み・Realtime が使えないときの定期更新・取りこぼしの補完) */
+  const load = useCallback(
+    async (quiet: boolean) => {
+      try {
+        const list = await api.chatHistory(friend.id);
+        const current = known.current;
+        const same = current.length === list.length && current.every((m, i) => m.id === list[i]?.id);
+        const incoming = !same && list.some((m) => !m.mine && !current.some((c) => c.id === m.id));
+        if (!same) setMessages(list);
+        if (!quiet || incoming) {
+          await api.chatRead(friend.id);
+          void refresh();
+        }
+      } catch (e) {
+        if (!quiet) fail(e);
+      }
+    },
+    [friend.id, fail, refresh],
+  );
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
+
+  // Realtime が使えないとき (社内ネットワークなど) は、数秒ごとに履歴を取り直す。使えるときも念のため低頻度で補完
+  useEffect(() => {
+    const id = window.setInterval(() => void load(true), net === 'ok' ? 20_000 : 4_000);
+    return () => window.clearInterval(id);
+  }, [load, net]);
 
   useOnlineEvents((event) => {
     if (event.type !== 'message' || event.matchId) return;
@@ -141,6 +161,7 @@ interface Props {
 }
 
 export function ChatTab({ openId, onOpen, onProfile }: Props) {
+  const { net } = useOnline();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -156,6 +177,10 @@ export function ChatTab({ openId, onOpen, onProfile }: Props) {
   useEffect(() => {
     void load();
   }, [load, openId]);
+  useEffect(() => {
+    const id = window.setInterval(() => void load(), net === 'ok' ? 20_000 : 5_000);
+    return () => window.clearInterval(id);
+  }, [load, net]);
   useOnlineEvents((event) => {
     if (event.type === 'message' || event.type === 'friends_changed') void load();
   });

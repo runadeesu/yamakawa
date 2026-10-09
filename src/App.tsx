@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { audio } from './audio/instance';
 import { GameScreen } from './components/GameScreen';
 import { HowToPlay } from './components/HowToPlay';
-import { ConnectionBanner } from './components/online/ConnectionBanner';
 import { OnlineApp } from './components/online/OnlineApp';
 import { Toasts } from './components/online/Toasts';
 import { TitleScreen } from './components/TitleScreen';
@@ -125,7 +124,6 @@ function AppInner() {
         />
       )}
       {howTo && sprites && <HowToPlay sprites={sprites} onClose={closeHowTo} />}
-      <ConnectionBanner />
       <Toasts />
     </div>
   );

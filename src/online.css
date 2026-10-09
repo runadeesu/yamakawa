@@ -476,23 +476,28 @@ textarea {
 }
 
 .conn-banner {
-  position: fixed;
-  z-index: 95;
-  left: 0;
-  right: 0;
-  bottom: env(safe-area-inset-bottom);
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 8px 12px;
-  font-size: 14px;
+  margin: 0 12px 4px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1.4;
+  border-radius: 12px;
+}
+
+.conn-offline {
   background: #8a1f3d;
 }
 
-.conn-connecting {
-  background: #7a5a00;
+.conn-degraded {
+  font-weight: 700;
+  color: #d8f3ff;
+  background: rgba(77, 195, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(77, 195, 255, 0.45);
 }
 
 /* ------------------------------------------------------------- sheet / dialog */
@@ -622,6 +627,7 @@ textarea {
 }
 
 .field input,
+.search input,
 .search-form input,
 .composer input {
   flex: 1;
@@ -638,12 +644,14 @@ textarea {
 }
 
 .field input:focus,
+.search input:focus,
 .search-form input:focus,
 .composer input:focus {
   outline: 3px solid var(--yellow);
   outline-offset: 1px;
 }
 
+.search,
 .search-form {
   display: flex;
   gap: 8px;

@@ -130,6 +130,8 @@ export interface MatchPlayer {
   wins: number;
   losses: number;
   matches: number;
+  /** 最後の生存報告からの経過 (ms)。サーバー基準の接続状態。対戦中の未終了プレイヤーのみ */
+  idle_ms: number | null;
 }
 
 export interface MatchState {

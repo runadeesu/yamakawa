@@ -45,6 +45,14 @@ export class VersusRunner {
   private leadRetryAt = 0;
   private disposed = false;
   private channelReady = false;
+  /** 相手が最後に生存報告してからの経過 (サーバー基準) と、それを受け取った時刻 */
+  private oppIdle: { ms: number; at: number } | null = null;
+  private pollOk = true;
+  /**
+   * 対戦ログの step は「対戦開始の瞬間」からの物理ステップ数。サーバーはこれを実際の経過時間と突き合わせる。
+   * Game はロビーの間に作られて物理が先に回り始めるので、開始時点の stepCount を覚えておく。
+   */
+  private baseStep: number | null = null;
 
   constructor(matchId: string, onChange: () => void) {
     this.matchId = matchId;
@@ -97,12 +105,19 @@ export class VersusRunner {
     return Math.max(opp.final_score ?? 0, opp.progress_score, this.opponentBoard?.s ?? 0);
   }
 
+  /**
+   * 相手との通信状態。盤面スナップショット (Realtime) が届いていれば良好。
+   * 届かない環境でも、サーバーが数える「相手の最後の生存報告からの経過」で判定する
+   * (相手は3秒ごとに報告し、25秒途絶えるとサーバーが棄権扱いにする)。
+   */
   get link(): LinkQuality {
     const opp = this.opponent;
     if (!opp || opp.finished || this.phase !== 'playing') return 'good';
-    const age = performance.now() - this.lastSnapAt;
-    if (!this.lastSnapAt) return performance.now() - this.lastProgressAt < 8000 ? 'weak' : 'lost';
-    return age < 1500 ? 'good' : age < 5000 ? 'weak' : 'lost';
+    const now = performance.now();
+    if (this.lastSnapAt && now - this.lastSnapAt < 1500) return 'good';
+    if (!this.pollOk) return 'weak';                       // こちらの通信が不安定: 相手の状態は分からない
+    const idle = this.oppIdle ? this.oppIdle.ms + (now - this.oppIdle.at) : 0;
+    return idle < 8000 ? 'good' : idle < 16000 ? 'weak' : 'lost';
   }
 
   /* ------------------------------------------------------------- lifecycle */
@@ -132,7 +147,7 @@ export class VersusRunner {
     this.game = game;
     this.offGame = game.session.on((event) => {
       if (this.phase !== 'playing') return;
-      const step = game.session.stepCount;
+      const step = this.stepNow(game);
       if (event.type === 'drop') this.log.push([step, 0, event.level]);
       else if (event.type === 'merge') this.log.push([step, 1, event.level]);
       else if (event.type === 'gameover') {
@@ -185,15 +200,23 @@ export class VersusRunner {
     this.changed();
   }
 
+  private stepNow(game: Game): number {
+    return Math.max(0, game.session.stepCount - (this.baseStep ?? game.session.stepCount));
+  }
+
   private syncLock(): void {
     if (!this.game) return;
-    if (this.phase === 'playing') this.game.session.unlock();
-    else this.game.session.lock();
+    if (this.phase === 'playing') {
+      if (this.baseStep === null) this.baseStep = this.game.session.stepCount;
+      this.game.session.unlock();
+    } else this.game.session.lock();
   }
 
   /** サーバーの状態を取り込み、フェーズを進める */
   private apply(state: MatchState): void {
     this.match = state;
+    const idle = state.players.find((p) => p.id !== state.me)?.idle_ms;
+    this.oppIdle = typeof idle === 'number' ? { ms: idle, at: performance.now() } : null;
     if (state.status === 'cancelled') {
       this.setPhase('cancelled');
       return;
@@ -229,11 +252,13 @@ export class VersusRunner {
       const next = await this.timed(() => (reportProgress ? api.matchProgress(this.matchId, this.myScore) : api.matchGet(this.matchId)));
       if (this.disposed) return;
       if (reportProgress) this.lastProgressAt = performance.now();
+      this.pollOk = true;
       this.apply(next);
       this.message = null;
       this.changed();
     } catch (error) {
       if (error instanceof ApiError && error.code === 'network') {
+        this.pollOk = false;
         this.message = '通信が不安定です。再接続しています…';
         this.changed();
       } else if (error instanceof ApiError && error.code === 'not_found') {

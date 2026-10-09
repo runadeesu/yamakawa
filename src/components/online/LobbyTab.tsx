@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function LobbyTab({ matchmaking, onMatch, onOpenFriends }: Props) {
-  const { me, toast } = useOnline();
+  const { me, toast, refresh } = useOnline();
   const { state, join, cancel } = matchmaking;
   const [invites, setInvites] = useState<Invites>({ incoming: [], outgoing: [] });
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -25,16 +25,18 @@ export function LobbyTab({ matchmaking, onMatch, onOpenFriends }: Props) {
       const [inv, fr] = await Promise.all([api.invites(), api.friends()]);
       setInvites(inv);
       setFriends(fr);
+      // 相手が招待を承認した: 対戦の準備画面へは OnlineApp が (サーバーの active_match を見て) 移る。
+      // 過去に承認された招待でこの画面を作り直したときに、終わった対戦を開き直さないよう、ここでは開かない
       for (const out of inv.outgoing) {
         if (out.status === 'accepted' && out.match_id && !opened.current.has(out.id)) {
           opened.current.add(out.id);
-          onMatch(out.match_id);
+          void refresh();
         }
       }
     } catch {
       /* 一覧の更新に失敗しても画面は維持する (接続バナーで状態が分かる) */
     }
-  }, [onMatch]);
+  }, [refresh]);
 
   useEffect(() => {
     void load();

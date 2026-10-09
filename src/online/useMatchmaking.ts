@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { MATCH_SEARCH_HINT_S } from './config';
 import { useOnline, useOnlineEvents } from './OnlineProvider';
 
 export interface MatchmakingState {
@@ -12,7 +13,6 @@ export interface MatchmakingState {
 }
 
 const POLL_MS = 1500;
-const SLOW_AFTER_S = 40;
 
 /** クイックマッチの待機。タブを切り替えても検索は続く (OnlineApp で保持する) */
 export function useMatchmaking(onMatched: (matchId: string) => void) {
@@ -42,7 +42,7 @@ export function useMatchmaking(onMatched: (matchId: string) => void) {
         setState({ phase: 'idle', waited: 0, searching: 0, slow: false, timedOut: true });
       } else {
         const waited = Math.floor((Date.now() - startedAt.current) / 1000);
-        setState({ phase: 'searching', waited, searching: status.searching ?? 0, slow: waited >= SLOW_AFTER_S, timedOut: false });
+        setState({ phase: 'searching', waited, searching: status.searching ?? 0, slow: waited >= MATCH_SEARCH_HINT_S, timedOut: false });
       }
     } catch (error) {
       if (!(error instanceof Error && error.message === 'network')) {

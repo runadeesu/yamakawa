@@ -44,15 +44,21 @@ function MatchChat({ matchId, onClose, opponent }: { matchId: string; onClose: (
   const action = useAction();
   const myId = me?.player.id;
 
+  const { net } = useOnline();
   useEffect(() => {
     let cancelled = false;
-    void api.matchChatHistory(matchId).then((list) => {
-      if (!cancelled) setMessages((current) => [...list, ...current.filter((m) => !list.some((x) => x.id === m.id))]);
-    }).catch(fail);
+    const load = (quiet: boolean) =>
+      api.matchChatHistory(matchId).then((list) => {
+        if (!cancelled) setMessages((current) => (current.length === list.length && current.every((m, i) => m.id === list[i]?.id) ? current : list));
+      }).catch((error) => (quiet ? undefined : fail(error)));
+    void load(false);
+    // Realtime が使えないときは数秒ごとに取り直す
+    const id = window.setInterval(() => void load(true), net === 'ok' ? 20_000 : 4_000);
     return () => {
       cancelled = true;
+      window.clearInterval(id);
     };
-  }, [matchId, fail]);
+  }, [matchId, fail, net]);
 
   useOnlineEvents((event) => {
     if (event.type !== 'message' || event.matchId !== matchId || event.senderId === myId) return;
