@@ -30,6 +30,8 @@ export interface GameOptions {
   frame: HTMLElement;
   sprites: SpriteSet;
   audio: AudioManager;
+  /** オンライン対戦: 落ちてくる順番をサーバー指定にし、開始までは落とせないようにする */
+  sequence?: readonly number[];
   onHud(hud: HudState): void;
   onGameOver(result: GameResult): void;
 }
@@ -57,6 +59,7 @@ export class Game {
   private gameOverTimer = 0;
   private shaking = false;
   private running = false;
+  private frozen = false;
   private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   constructor(options: GameOptions) {
@@ -68,7 +71,8 @@ export class Game {
     const seed = new URLSearchParams(window.location.search).get('seed');
     const rng = seed !== null && Number.isFinite(Number(seed)) ? mulberry32(Number(seed)) : Math.random;
     this.savedBest = loadBest();
-    this.session = new GameSession(rng, this.savedBest);
+    this.session = new GameSession(rng, this.savedBest, options.sequence);
+    if (options.sequence) this.session.lock();
     this.offSession = this.session.on((event) => this.onSessionEvent(event));
 
     this.input = new InputController(options.canvas, {
@@ -96,6 +100,11 @@ export class Game {
     this.resizeObserver.disconnect();
     this.offSession();
     this.o.frame.style.transform = '';
+  }
+
+  /** 物理の更新を止める (対戦終了後。描画と演出は続く) */
+  setFrozen(frozen: boolean): void {
+    this.frozen = frozen;
   }
 
   restart(): void {
@@ -133,7 +142,7 @@ export class Game {
       session.setAim(session.aimX + (this.input.direction * INPUT.keyboardSpeed * dt) / 1000);
     }
 
-    this.acc += dt;
+    this.acc += this.frozen ? 0 : dt;
     let steps = 0;
     while (this.acc >= PHYSICS.stepMs && steps < PHYSICS.maxStepsPerFrame) {
       session.step(PHYSICS.stepMs);
@@ -186,7 +195,7 @@ export class Game {
         this.onMerge(event);
         break;
       case 'hud':
-        if (this.session.best > this.savedBest) {
+        if (!this.o.sequence && this.session.best > this.savedBest) {
           this.savedBest = this.session.best;
           saveBest(this.savedBest);
         }

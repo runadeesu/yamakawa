@@ -122,7 +122,7 @@ function drawHeld(ctx: CanvasRenderingContext2D, scene: SceneState): void {
   const radius = levelDef(level).radius;
   const x = session.clampAim(session.aimX);
   const ready = 1 - session.cooldownMs / TIMING.dropCooldownMs;
-  if (session.cooldownMs <= 0) {
+  if (session.cooldownMs <= 0 && !session.isLocked) {
     ctx.save();
     ctx.globalAlpha = 0.28;
     ctx.strokeStyle = '#ffffff';

@@ -13,11 +13,13 @@
     "e2e": "node e2e/play.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "matter-js": "^0.20.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/matter-js": "^0.20.2",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",

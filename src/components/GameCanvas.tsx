@@ -7,6 +7,8 @@ import type { SpriteSet } from '../game/sprites';
 interface Props {
   sprites: SpriteSet;
   audio: AudioManager;
+  /** オンライン対戦のときだけ指定 */
+  sequence?: readonly number[];
   onReady: (game: Game | null) => void;
   onHud: (hud: HudState) => void;
   onGameOver: (result: GameResult) => void;
@@ -16,7 +18,7 @@ interface Props {
  * ゲームの Canvas。Game インスタンスは effect 内で一度だけ作り、
  * 以降の描画・物理は React の再レンダリングとは無関係に rAF で回る。
  */
-export const GameCanvas = memo(function GameCanvas({ sprites, audio, onReady, onHud, onGameOver }: Props) {
+export const GameCanvas = memo(function GameCanvas({ sprites, audio, sequence, onReady, onHud, onGameOver }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,6 +36,7 @@ export const GameCanvas = memo(function GameCanvas({ sprites, audio, onReady, on
       frame,
       sprites,
       audio,
+      sequence,
       onHud: (hud) => callbacks.current.onHud(hud),
       onGameOver: (result) => callbacks.current.onGameOver(result),
     });
@@ -45,7 +48,7 @@ export const GameCanvas = memo(function GameCanvas({ sprites, audio, onReady, on
       game.dispose();
       callbacks.current.onReady(null);
     };
-  }, [sprites, audio]);
+  }, [sprites, audio, sequence]);
 
   return (
     <div className="stage" ref={stageRef}>

@@ -36,3 +36,17 @@ export function loadFlag(key: string): boolean {
 export function saveFlag(key: string, value: boolean): void {
   write(key, value ? '1' : '0');
 }
+
+/** supabase-js の auth.storage に渡す。localStorage が使えない環境でもメモリで動く */
+export const safeStorage = {
+  getItem: (key: string): string | null => read(key),
+  setItem: (key: string, value: string): void => write(key, value),
+  removeItem: (key: string): void => {
+    memory.delete(key);
+    try {
+      globalThis.localStorage.removeItem(key);
+    } catch {
+      /* メモリ側は削除済み */
+    }
+  },
+};

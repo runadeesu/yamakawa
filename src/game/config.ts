@@ -40,8 +40,8 @@ export const PHYSICS = {
 export const TIMING = {
   /** 落下後、次のてるきが構えられるまで */
   dropCooldownMs: 480,
-  /** 連続合体とみなす間隔 */
-  comboWindowMs: 1400,
+  /** 連続合体とみなす間隔 (物理ステップ数。1400ms 相当)。対戦のサーバー検証と同じ整数で数える */
+  comboWindowSteps: 84,
   /** 生成直後は危険ライン判定をしない猶予 */
   spawnGraceMs: 1600,
   /** 危険ラインを超え続けて良い時間 */

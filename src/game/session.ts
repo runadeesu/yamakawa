@@ -21,6 +21,8 @@ export function comboMultiplier(combo: number): number {
 export class GameSession {
   readonly world = new TerukiWorld();
   phase: SessionPhase = 'playing';
+  /** 経過した物理ステップ数。対戦ログ・コンボ判定の時間軸 (整数なのでサーバーと誤差なく一致する) */
+  stepCount = 0;
   score = 0;
   best: number;
   combo = 0;
@@ -33,17 +35,22 @@ export class GameSession {
   /** 0〜1。危険ラインを超えている時間 / 許容時間 */
   dangerRatio = 0;
 
+  private locked = false;
   private readonly rng: Rng;
+  private readonly sequence: readonly number[] | undefined;
+  private sequenceIndex = 0;
   private readonly listeners = new Set<(event: SessionEvent) => void>();
-  private lastMergeAt = -Infinity;
+  private lastMergeStep = -Infinity;
   private lastHitAt = -Infinity;
   private dangerActive = false;
   private bestAtStart: number;
 
-  constructor(rng: Rng, best: number) {
+  /** sequence を渡すと、落ちてくるレベルをその順番どおりにする (オンライン対戦: 両者共通の出現順) */
+  constructor(rng: Rng, best: number, sequence?: readonly number[]) {
     this.rng = rng;
     this.best = best;
     this.bestAtStart = best;
+    this.sequence = sequence;
     this.rollQueue();
   }
 
@@ -56,9 +63,18 @@ export class GameSession {
     for (const listener of this.listeners) listener(event);
   }
 
+  private nextPiece(): number {
+    if (this.sequence) {
+      const level = this.sequence[this.sequenceIndex++];
+      if (level !== undefined) return level;
+    }
+    return rollDropLevel(this.rng);
+  }
+
   private rollQueue(): void {
-    this.currentLevel = rollDropLevel(this.rng);
-    this.nextLevel = rollDropLevel(this.rng);
+    this.sequenceIndex = 0;
+    this.currentLevel = this.nextPiece();
+    this.nextLevel = this.nextPiece();
   }
 
   restart(): void {
@@ -67,10 +83,11 @@ export class GameSession {
     this.score = 0;
     this.combo = 0;
     this.finalCount = 0;
+    this.stepCount = 0;
     this.cooldownMs = 0;
     this.dangerRatio = 0;
     this.dangerActive = false;
-    this.lastMergeAt = -Infinity;
+    this.lastMergeStep = -Infinity;
     this.lastHitAt = -Infinity;
     this.aimX = FIELD_W / 2;
     this.bestAtStart = this.best;
@@ -88,8 +105,21 @@ export class GameSession {
     this.aimX = this.clampAim(x);
   }
 
+  /** 対戦のカウントダウン中・終了後は落とせないようにする */
+  lock(): void {
+    this.locked = true;
+  }
+
+  unlock(): void {
+    this.locked = false;
+  }
+
+  get isLocked(): boolean {
+    return this.locked;
+  }
+
   canDrop(): boolean {
-    return this.phase === 'playing' && this.cooldownMs <= 0;
+    return this.phase === 'playing' && this.cooldownMs <= 0 && !this.locked;
   }
 
   /** 現在のてるきを aimX から落とす。クールダウン中・ゲームオーバー中は無視 */
@@ -99,7 +129,7 @@ export class GameSession {
     const x = this.clampAim(this.aimX, level);
     this.world.spawn(level, x, DROP_Y);
     this.currentLevel = this.nextLevel;
-    this.nextLevel = rollDropLevel(this.rng);
+    this.nextLevel = this.nextPiece();
     this.cooldownMs = TIMING.dropCooldownMs;
     this.addScore(SCORE.drop);
     this.aimX = this.clampAim(x);
@@ -111,6 +141,7 @@ export class GameSession {
   /** dt ms 分、ゲームを1ステップ進める */
   step(dt: number): void {
     if (this.phase !== 'playing') return;
+    this.stepCount++;
     this.cooldownMs = Math.max(0, this.cooldownMs - dt);
     this.world.step(dt);
     this.processMerges();
@@ -124,10 +155,9 @@ export class GameSession {
   }
 
   private processMerges(): void {
-    const now = this.world.clock;
     for (const merge of this.world.resolveMerges()) {
-      this.combo = now - this.lastMergeAt <= TIMING.comboWindowMs ? this.combo + 1 : 1;
-      this.lastMergeAt = now;
+      this.combo = this.stepCount - this.lastMergeStep <= TIMING.comboWindowSteps ? this.combo + 1 : 1;
+      this.lastMergeStep = this.stepCount;
       const points = Math.round(levelDef(merge.level).score * comboMultiplier(this.combo));
       const final = merge.level === MAX_LEVEL;
       if (final) this.finalCount++;

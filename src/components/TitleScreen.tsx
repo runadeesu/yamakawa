@@ -1,19 +1,31 @@
 import type { SpriteSet } from '../game/sprites';
 import { Evolution } from './Evolution';
+import { Badge } from './online/common';
 import { ToggleButton } from './ToggleButton';
+
+export interface OnlineEntry {
+  /** サーバー設定があるか */
+  enabled: boolean;
+  /** ログイン中の表示名 */
+  name: string | null;
+  /** 未読・申請・招待の合計 */
+  badge: number;
+}
 
 interface Props {
   sprites: SpriteSet | null;
   best: number;
   voiceOn: boolean;
   sfxOn: boolean;
+  online: OnlineEntry;
   onStart: () => void;
+  onOnline: () => void;
   onHowTo: () => void;
   onToggleVoice: () => void;
   onToggleSfx: () => void;
 }
 
-export function TitleScreen({ sprites, best, voiceOn, sfxOn, onStart, onHowTo, onToggleVoice, onToggleSfx }: Props) {
+export function TitleScreen({ sprites, best, voiceOn, sfxOn, online, onStart, onOnline, onHowTo, onToggleVoice, onToggleSfx }: Props) {
   return (
     <main className="title">
       <div className="title-bubbles" aria-hidden="true">
@@ -33,6 +45,15 @@ export function TitleScreen({ sprites, best, voiceOn, sfxOn, onStart, onHowTo, o
         <button type="button" className="btn btn-primary btn-start" onClick={onStart} disabled={!sprites} data-testid="start">
           START
         </button>
+        {online.enabled ? (
+          <button type="button" className="btn btn-online" onClick={onOnline} disabled={!sprites} data-testid="online-start">
+            <span aria-hidden="true">🌐</span> オンライン対戦
+            <Badge count={online.badge} />
+            {online.name && <small className="online-as">{online.name} でログイン中</small>}
+          </button>
+        ) : (
+          <p className="online-off" data-testid="online-off">オンライン対戦はこのビルドでは無効です</p>
+        )}
         <div className="title-options">
           <ToggleButton on={voiceOn} onIcon="🔊" offIcon="🔇" label="音声" onToggle={onToggleVoice} testId="title-voice" />
           <ToggleButton on={sfxOn} onIcon="🔔" offIcon="🔕" label="効果音" onToggle={onToggleSfx} testId="title-sfx" />
