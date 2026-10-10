@@ -45,13 +45,24 @@ npm run preview    # ビルド結果を確認
 
 ## 音声について
 
-- 叫び声・ボイスは **ユーザー提供の MP3 だけ** (`public/audio/yamakawateruki-ndedayotuboooom.mp3`)。新しいセリフ・TTS・加工は一切ありません。
-- 合体で再生。ただしボイスは常に最大1本で、重ならないようクールダウンを設けています (`src/audio/voiceScheduler.ts`)。
+- 叫び声・ボイスは **ユーザー提供の音声だけ** です。新しいセリフ・TTS・加工 (内容の編集) は一切ありません。
+  - `public/audio/yamakawateruki-ndedayotuboooom.mp3` (最初から入っていた 1 本)
+  - `public/audio/voices/rage_001〜064.mp3` (追加の怒声・叫び声 64 本。合計 約 4 分)
+- 合体のたびに、この **65 本からランダムに 1 本** が鳴ります (`src/audio/voicePool.ts`)。
+  - 全部をシャッフルして順に使い、使い切ったら入れ直す方式 (シャッフルバッグ)。**一巡するまで同じ声は出ず、同じ声が 2 回続くこともありません。**
+  - 次に鳴る 3 本だけを先読みしてデコードし、鳴らし終えたら捨てます (全部をメモリに置かない。ネットワークも使った分だけ)。
+- 鳴らすタイミングのルールは従来どおり。ボイスは常に最大 1 本で、重ならないようクールダウンを設けています (`src/audio/voiceScheduler.ts`)。
   - 通常合体: 前のボイスが終わって 250ms 後まで再生しない
   - 大型合体 (Level 6+): 500ms 経っていれば再生中でも切り替えて再生
   - 最終形態: ほぼ常に再生
+  - 追加クリップは 2〜5 秒と長いので、連続で合体しているあいだは声が鳴る間隔が長くなります
+- 追加クリップは `scripts/prepare-voices.sh` で整えています (内容は変えず、音量とフォーマットだけ)。
+  - 素材はもともと既存ボイスより約 13dB 小さかったため、**音量を揃えました** (−14.7〜−9.4 LUFS、ピークは −0.5dBTP 以下で割れない)
+  - モノラル・96kbps に変換 (約 2.9MB)、端に 5ms / 40ms の短いフェードを追加 (切れ目の「ぷつっ」防止)
+  - ⚠ 素材は元の長い音源から**自動で切り出されたもの**で、怒声以外の音が混ざっている可能性があります。聞いて外したいものは `src/audio/voiceClips.ts` の一覧から除いてください。
+  - ⚠ 元の音源の著作権・利用許諾は、公開前にご確認ください。
 - drop / collision / merge / button / gameover などの効果音は Web Audio で合成 (`src/audio/sfx.ts`)。
-- MP3 の読み込み失敗・AudioContext なし・localStorage 不可でもゲーム本体は動きます。
+- 音声の読み込み失敗・AudioContext なし・localStorage 不可でもゲーム本体は動きます (読み込めないクリップはそのセッションでは使わず、残りで続けます)。
 
 ## 構成
 
@@ -67,7 +78,7 @@ src/
     renderer.ts    Canvas 描画 (固定ステップ間の補間つき)
     input.ts       マウス / タッチ / キーボード
     Game.ts        固定ステップの rAF ループ。React state には依存しない
-  audio/           AudioManager (MP3 ボイス) / Sfx (合成音) / VoiceScheduler
+  audio/           AudioManager (ボイス) / VoicePool (ランダム選択) / voiceClips (クリップ一覧) / Sfx (合成音) / VoiceScheduler
   components/      タイトル・HUD・コントロール・ゲームオーバー・遊び方
   assets/faces/    てるきの顔画像 (提供画像から切り出し)
   online/          オンライン: API・ログイン状態・マッチング・対戦の進行 (versus/)
@@ -85,7 +96,7 @@ docs/ONLINE.md     オンライン機能の設計・手順・テスト記録
 ## テスト
 
 ```bash
-npm test                      # 物理・合体・スコア・ボイス + オンライン (DB 結合・Edge Function・対戦ログ) 95 件 (vitest)
+npm test                      # 物理・合体・スコア・ボイス (ランダム選択含む) + オンライン (DB 結合・Edge Function・対戦ログ) 95 件 (vitest)
 npm run build && npm run e2e  # START → 落下 → 合体 → MP3 → 最終形態 → GAME OVER → リスタート ほか (89 項目)
 npm run e2e:online            # オンライン E2E (実 Supabase にテスト用 zz_e2e_* アカウントを作る。82 項目)
 npm run e2e:realtime          # Realtime (WebSocket) 検証。プロキシ越しの環境では NODE_USE_ENV_PROXY=1 を付ける

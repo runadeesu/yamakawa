@@ -342,6 +342,13 @@ try {
       if (!endsBefore && !cutOff) overlaps++;
     }
     check('voices never overlap', overlaps === 0, `overlaps=${overlaps}`);
+    // ボイスは 65 クリップ (元の 1 本 + 怒声 64 本) からランダムに選ばれる
+    const hist = st.audio.voiceHistory;
+    check('each voice is one clip of the pool (ids recorded)', hist.length === st.audio.voicePlays && hist.every((id) => /^(original|rage_\d{3})$/.test(id)), JSON.stringify(hist));
+    check('the same clip never plays twice in a row', hist.every((id, i) => i === 0 || id !== hist[i - 1]), JSON.stringify(hist));
+    check('clips vary (no repeats within one shuffle)', new Set(hist).size === hist.length, JSON.stringify(hist));
+    const fetched = await page.evaluate(() => performance.getEntriesByType('resource').filter((r) => /\/audio\/.*\.mp3/.test(r.name)).length);
+    check('clips are fetched lazily, a few ahead (not all 65 up front)', fetched >= 1 && fetched < 25, `fetched=${fetched}`);
     await page.screenshot({ path: OUT + 'play.png' });
     check('no console errors', errors.length === 0, errors.join(' | '));
     await context.close();
